@@ -15,33 +15,27 @@ public class UserController {
     @Autowired
     private UserRepository userRepository;
 
-    @PostMapping("/sync")
-    public User syncUser(@RequestHeader("Authorization") String idToken, @RequestBody User userDetails) {
-        try {
-            // 1. Frontend yuborgan Bearer tokendan faqat kodni ajratib olish
-            String token = idToken.replace("Bearer ", "");
-            
-            // 2. Firebase orqali tokenni tekshirish (haqiqiyligini aniqlash)
-            FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(token);
-            String uid = decodedToken.getUid();
+   @PostMapping("/sync")
+public ResponseEntity<?> syncUser(@RequestHeader("Authorization") String idToken, @RequestBody User userDetails) {
+    try {
+        String token = idToken.replace("Bearer ", "");
+        FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(token);
+        String uid = decodedToken.getUid();
 
-            // 3. Bazadan ushbu foydalanuvchini qidirish
-            Optional<User> existingUser = userRepository.findByFirebaseUid(uid);
-
-            if (existingUser.isPresent()) {
-                // Agar foydalanuvchi bazada bo'lsa, borini qaytaramiz
-                return existingUser.get();
-            } else {
-                // Agar foydalanuvchi yangi bo'lsa, ma'lumotlarini to'ldirib saqlaymiz
+        return userRepository.findByFirebaseUid(uid)
+            .map(ResponseEntity::ok)
+            .orElseGet(() -> {
                 userDetails.setFirebaseUid(uid);
-                if (userDetails.getRole() == null) userDetails.setRole("USER"); // Default rol
-                return userRepository.save(userDetails);
-            }
-        } catch (Exception e) {
-            throw new RuntimeException("Firebase tokenni tekshirishda xatolik: " + e.getMessage());
-        }
+                if (userDetails.getRole() == null) userDetails.setRole("USER");
+                User savedUser = userRepository.save(userDetails);
+                return ResponseEntity.ok(savedUser);
+            });
+    } catch (Exception e) {
+        // Xatoni aniq ko'rish uchun terminalga chiqaramiz
+        e.printStackTrace(); 
+        return ResponseEntity.status(401).body("Xatolik: " + e.getMessage());
     }
-
+}
     @GetMapping("/me")
     public String test() {
         return "Backend ishlayapti, baza ulandi!";
