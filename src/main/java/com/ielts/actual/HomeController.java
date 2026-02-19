@@ -4,7 +4,7 @@ import org.springframework.web.bind.annotation.CrossOrigin; // Mana buni qo'shis
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@CrossOrigin(origins = "*") // 1. Mana shu qatorni qo'shing
+@CrossOrigin(origins = {"https://platform-v11.web.app", "https://platform-v11.firebaseapp.com"})
 @RestController
 public class HomeController {
 
