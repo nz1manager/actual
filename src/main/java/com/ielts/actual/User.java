@@ -24,7 +24,7 @@ public class User {
     
     @Column(unique = true)
     private String email;
-    
+  @JsonProperty("phoneNumber") // Frontend'dan "phoneNumber" bo'lib kelsa, Java buni "phone"ga o'qiydi
     private String phone;
     private String role; // ADMIN yoki USER
     private Integer score; // IELTS balli
