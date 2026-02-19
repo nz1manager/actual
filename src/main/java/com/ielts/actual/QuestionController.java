@@ -5,7 +5,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/questions") // Bu Controller'ning manzili
-@CrossOrigin(origins = "*")      // Frontend ulanishi uchun ruxsat
+@CrossOrigin(origins = {"https://platform-v11.web.app", "https://platform-v11.firebaseapp.com"})
 public class QuestionController {
 
     // Hozircha bazasiz, shunchaki test uchun ro'yxat qaytaramiz
