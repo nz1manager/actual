@@ -9,7 +9,7 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/users")
-@CrossOrigin(origins = "*") // Hamma joydan (Firebase hostingdan) keladigan so'rovlarga ruxsat berish
+@CrossOrigin(origins = {"https://platform-v11.web.app", "https://platform-v11.firebaseapp.com"})
 public class UserController {
 
     @Autowired
