@@ -21,7 +21,9 @@ public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         .cors(Customizer.withDefaults()) // CORS xatosini yo'qotish uchun
         .headers(headers -> headers.frameOptions(frame -> frame.disable()))
         .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/api/admin/verify", "/api/users/**").permitAll() // Bu yo'llarni hamma uchun ochish
+            // MUHIM: OPTIONS so'rovlariga (pre-flight) ruxsat berish Chrome-dagi 403 ni yo'qotadi
+            .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
+            .requestMatchers("/api/admin/verify", "/api/users/**").permitAll()
             .anyRequest().authenticated()
         );
     return http.build();
