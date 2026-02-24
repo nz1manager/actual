@@ -15,25 +15,16 @@ import java.util.List;
 public class SecurityConfig {
 
 @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-            .cors(Customizer.withDefaults()) // Sizda bor edi, zo'r!
-            .csrf(csrf -> csrf.disable())    // Sizda bor edi, bu shart!
-            .authorizeHttpRequests(auth -> auth
-                // 1. Mana bu yo'lni hamma uchun ochamiz (Sync qilish uchun)
-                .requestMatchers("/api/users/sync").permitAll() 
-                
-                // 2. Mana bu yo'lni faqat login qilganlar ko'radi
-                .requestMatchers("/api/users/me").authenticated() 
-                
-                // 3. Qolgan hamma narsaga ruxsat beramiz
-                .anyRequest().permitAll() 
-            )
-            .httpBasic(Customizer.withDefaults());
-        
-        return http.build();
-    }
-
+public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    http
+        .csrf(csrf -> csrf.disable()) // POST so'rovlari bloklanmasligi uchun
+        .cors(Customizer.withDefaults()) // CORS xatosini yo'qotish uchun
+        .authorizeHttpRequests(auth -> auth
+            .requestMatchers("/api/admin/verify", "/api/users/**").permitAll() // Bu yo'llarni hamma uchun ochish
+            .anyRequest().authenticated()
+        );
+    return http.build();
+}
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
