@@ -19,6 +19,7 @@ public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
     http
         .csrf(csrf -> csrf.disable()) // POST so'rovlari bloklanmasligi uchun
         .cors(Customizer.withDefaults()) // CORS xatosini yo'qotish uchun
+        .headers(headers -> headers.frameOptions(frame -> frame.disable()))
         .authorizeHttpRequests(auth -> auth
             .requestMatchers("/api/admin/verify", "/api/users/**").permitAll() // Bu yo'llarni hamma uchun ochish
             .anyRequest().authenticated()
