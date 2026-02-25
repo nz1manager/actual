@@ -1,9 +1,11 @@
+from django.contrib import admin
 from django.urls import path
 from django.http import JsonResponse
 
-def simple_check(request):
+def home(request):
     return JsonResponse({"status": "Success", "message": "Django is alive!"})
 
 urlpatterns = [
-    path('', simple_check),
+    path('admin/', admin.site.urls),
+    path('', home),
 ]
