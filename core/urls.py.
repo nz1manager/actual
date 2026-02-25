@@ -2,15 +2,23 @@ from django.contrib import admin
 from django.urls import path
 from django.http import JsonResponse
 from django.contrib.auth.models import User
+from django.core.management import call_command
 
-def create_admin(request):
-    # Agar 'drkz1' ismli admin bo'lmasa, yaratadi
-    if not User.objects.filter(username="drkz1").exists():
-        User.objects.create_superuser("drkz1", "admin@example.com", "4900728Tt")
-        return JsonResponse({"status": "Admin created!", "login": "drkz1", "pass": "4900728Tt"})
-    return JsonResponse({"status": "Admin already exists"})
+def setup_all(request):
+    try:
+        # Bazadagi jadvallarni yaratish (Migrate)
+        call_command('migrate')
+        
+        # Admin yaratish
+        if not User.objects.filter(username="drkz1").exists():
+            User.objects.create_superuser("drkz1", "admin@example.com", "4900728Tt")
+            return JsonResponse({"status": "Success", "message": "Database migrated and Admin created!"})
+        
+        return JsonResponse({"status": "Already setup", "message": "Database is ready"})
+    except Exception as e:
+        return JsonResponse({"status": "Error", "message": str(e)})
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('make-admin/', create_admin), # Bu manzilni brauzerda ochasiz
+    path('setup/', setup_all), # Endi shu manzilni ochamiz
 ]
