@@ -1,6 +1,7 @@
 import os
 from django.core.wsgi import get_wsgi_application
 
-os.environ.setdefault('django.settings_module', 'core.settings')
+# BU QATOR JUDA MUHIM: settings so'zi katta harf bilan yozilishi kerak
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 
 application = get_wsgi_application()
