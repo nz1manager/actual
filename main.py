@@ -1,4 +1,8 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+import os
+import json
+import firebase_admin
+from firebase_admin import credentials, auth
+from fastapi import FastAPI, Depends, HTTPException, status, Body
 from sqlalchemy.orm import Session
 from typing import List
 import database, models, schemas
@@ -8,6 +12,12 @@ from fastapi.middleware.cors import CORSMiddleware
 models.Base.metadata.create_all(bind=database.engine)
 
 app = FastAPI(title="IELTS ACTUAL 2026 API")
+# Firebase Admin SDK-ni Render-dagi Environment Variable-dan o'qish
+firebase_creds_json = os.getenv("FIREBASE_SERVICE_ACCOUNT")
+if firebase_creds_json:
+    creds_dict = json.loads(firebase_creds_json)
+    cred = credentials.Certificate(creds_dict)
+    firebase_admin.initialize_app(cred)
 
 # Frontend (Firebase/Web.app) ulanishi uchun
 app.add_middleware(
@@ -19,21 +29,41 @@ app.add_middleware(
 
 # --- FOYDALANUVCHI QISMI (STUDENT) ---
 
-@app.post("/auth/google", response_model=schemas.UserAuth)
-def google_login(user_data: schemas.UserAuth, db: Session = Depends(database.get_db)):
-    # Google orqali kirganda foydalanuvchini bazadan qidirish yoki yaratish
-    db_user = db.query(models.User).filter(models.User.google_id == user_data.google_id).first()
-    if not db_user:
-        db_user = models.User(
-            google_id=user_data.google_id, 
-            email=user_data.email, 
-            avatar_url=user_data.avatar_url
-        )
-        db.add(db_user)
-        db.commit()
-        db.refresh(db_user)
-    return db_user
+# YANGI VA XAVFSIZ KOD
+@app.post("/auth/google")
+def google_login(payload: dict = Body(...), db: Session = Depends(database.get_db)):
+    id_token = payload.get("id_token") # Frontend-dan keladi
+    try:
+        # Google tokenni Firebase orqali tekshirish
+        decoded_token = auth.verify_id_token(id_token)
+        google_id = decoded_token['uid']
+        email = decoded_token['email']
+        avatar_url = decoded_token.get('picture')
 
+        # Bazadan foydalanuvchini qidirish yoki yaratish
+        db_user = db.query(models.User).filter(models.User.google_id == google_id).first()
+        if not db_user:
+            db_user = models.User(
+                google_id=google_id, 
+                email=email, 
+                avatar_url=avatar_url
+            )
+            db.add(db_user)
+            db.commit()
+            db.refresh(db_user)
+        
+        return {
+            "status": "success", 
+            "user": {
+                "id": db_user.id, 
+                "email": db_user.email,
+                "first_name": db_user.first_name,
+                "last_name": db_user.last_name
+            }
+        }
+    except Exception as e:
+        print(f"Auth Error: {e}")
+        raise HTTPException(status_code=401, detail="Token yaroqsiz!")
 @app.post("/user/update")
 def update_profile(user_data: schemas.UserUpdate, db: Session = Depends(database.get_db)):
     # Ism, Familiya va Tel raqamni saqlash (Save tugmasi)
@@ -81,4 +111,5 @@ def calculate_overview(score: float):
 @app.get("/user/scores/{user_id}")
 def get_user_scores(user_id: int, db: Session = Depends(database.get_db)):
     # Dashboard uchun o'quvchi ballari
+
     return db.query(models.Score).filter(models.Score.user_id == user_id).all()
