@@ -1,11 +1,16 @@
 from django.contrib import admin
 from django.urls import path
 from django.http import JsonResponse
+from django.contrib.auth.models import User
 
-def home(request):
-    return JsonResponse({"message": "Django Backend is Live!", "status": "success"})
+def create_admin(request):
+    # Agar 'drkz1' ismli admin bo'lmasa, yaratadi
+    if not User.objects.filter(username="drkz1").exists():
+        User.objects.create_superuser("drkz1", "admin@example.com", "4900728Tt")
+        return JsonResponse({"status": "Admin created!", "login": "drkz1", "pass": "4900728Tt"})
+    return JsonResponse({"status": "Admin already exists"})
 
 urlpatterns = [
-    path('admin/', admin.site.path),
-    path('', home), # Asosiy sahifa tekshirish uchun
+    path('admin/', admin.site.urls),
+    path('make-admin/', create_admin), # Bu manzilni brauzerda ochasiz
 ]
