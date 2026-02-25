@@ -13,19 +13,24 @@ models.Base.metadata.create_all(bind=database.engine)
 
 app = FastAPI(title="IELTS ACTUAL 2026 API")
 
-# --- FIREBASE XAVFSIZ INITIALIZATION ---
+# Firebase qismini aynan mana shunga almashtiring
 firebase_creds_json = os.getenv("FIREBASE_SERVICE_ACCOUNT")
+print(f"DEBUG: Firebase JSON topildimi? {'Ha' if firebase_creds_json else 'Yoq'}")
+
 if firebase_creds_json:
     try:
-        # JSON ichidagi ortiqcha qator tashlashlarni tozalaymiz
-        creds_dict = json.loads(firebase_creds_json.replace('\n', '\\n'))
+        # JSONni tozalash
+        clean_json = firebase_creds_json.strip()
+        creds_dict = json.loads(clean_json)
+        
         if not firebase_admin._apps:
             cred = credentials.Certificate(creds_dict)
             firebase_admin.initialize_app(cred)
-        print("Firebase Successfully Initialized!")
+        print("DEBUG: Firebase muvaffaqiyatli ulandi!")
+    except json.JSONDecodeError as e:
+        print(f"DEBUG: JSON formatida xato bor: {e}")
     except Exception as e:
-        print(f"Firebase Init Error: {e}")
-
+        print(f"DEBUG: Firebase ulanishda kutilmagan xato: {e}")
 # CORS sozlamalari
 app.add_middleware(
     CORSMiddleware,
@@ -112,3 +117,4 @@ def delete_student(student_id: int, db: Session = Depends(database.get_db)):
 @app.get("/user/scores/{user_id}")
 def get_user_scores(user_id: int, db: Session = Depends(database.get_db)):
     return db.query(models.Score).filter(models.Score.user_id == user_id).all()
+
