@@ -8,45 +8,55 @@ from typing import List
 import database, models, schemas
 from fastapi.middleware.cors import CORSMiddleware
 
-# Bazani yaratish (Jadvallar bo'lmasa, avtomatik yaratadi)
+# Bazani yaratish
 models.Base.metadata.create_all(bind=database.engine)
 
 app = FastAPI(title="IELTS ACTUAL 2026 API")
-# Firebase Admin SDK-ni Render-dagi Environment Variable-dan o'qish
+
+# --- FIREBASE XAVFSIZ INITIALIZATION ---
 firebase_creds_json = os.getenv("FIREBASE_SERVICE_ACCOUNT")
 if firebase_creds_json:
-    creds_dict = json.loads(firebase_creds_json)
-    cred = credentials.Certificate(creds_dict)
-    firebase_admin.initialize_app(cred)
+    try:
+        # JSON ichidagi ortiqcha qator tashlashlarni tozalaymiz
+        creds_dict = json.loads(firebase_creds_json.replace('\n', '\\n'))
+        if not firebase_admin._apps:
+            cred = credentials.Certificate(creds_dict)
+            firebase_admin.initialize_app(cred)
+        print("Firebase Successfully Initialized!")
+    except Exception as e:
+        print(f"Firebase Init Error: {e}")
 
-# Frontend (Firebase/Web.app) ulanishi uchun
+# CORS sozlamalari
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"], 
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+@app.get("/")
+def home():
+    return {"message": "IELTS ACTUAL 2026 API - Live and Safe!"}
+
 # --- FOYDALANUVCHI QISMI (STUDENT) ---
 
-# YANGI VA XAVFSIZ KOD
 @app.post("/auth/google")
 def google_login(payload: dict = Body(...), db: Session = Depends(database.get_db)):
-    id_token = payload.get("id_token") # Frontend-dan keladi
+    id_token = payload.get("id_token")
     try:
-        # Google tokenni Firebase orqali tekshirish
         decoded_token = auth.verify_id_token(id_token)
         google_id = decoded_token['uid']
         email = decoded_token['email']
         avatar_url = decoded_token.get('picture')
 
-        # Bazadan foydalanuvchini qidirish yoki yaratish
         db_user = db.query(models.User).filter(models.User.google_id == google_id).first()
         if not db_user:
             db_user = models.User(
                 google_id=google_id, 
                 email=email, 
-                avatar_url=avatar_url
+                avatar_url=avatar_url,
+                role="student"
             )
             db.add(db_user)
             db.commit()
@@ -64,9 +74,9 @@ def google_login(payload: dict = Body(...), db: Session = Depends(database.get_d
     except Exception as e:
         print(f"Auth Error: {e}")
         raise HTTPException(status_code=401, detail="Token yaroqsiz!")
+
 @app.post("/user/update")
 def update_profile(user_data: schemas.UserUpdate, db: Session = Depends(database.get_db)):
-    # Ism, Familiya va Tel raqamni saqlash (Save tugmasi)
     db_user = db.query(models.User).filter(models.User.email == user_data.email).first()
     if not db_user:
         raise HTTPException(status_code=404, detail="Foydalanuvchi topilmadi")
@@ -82,19 +92,16 @@ def update_profile(user_data: schemas.UserUpdate, db: Session = Depends(database
 
 @app.post("/admin/login")
 def admin_auth(creds: schemas.AdminLogin):
-    # Siz aytgan maxfiy login va parol
     if creds.username == "drkz1manager" and creds.password == "4900728Tt":
         return {"access": "granted", "token": "admin_session_2026"}
     raise HTTPException(status_code=401, detail="Kirish taqiqlandi!")
 
 @app.get("/admin/students")
 def get_all_students(db: Session = Depends(database.get_db)):
-    # Admin uchun hamma o'quvchilar ro'yxati
     return db.query(models.User).filter(models.User.role == "student").all()
 
 @app.delete("/admin/students/{student_id}")
 def delete_student(student_id: int, db: Session = Depends(database.get_db)):
-    # O'quvchini bazadan butunlay o'chirish (Delete tugmasi)
     student = db.query(models.User).filter(models.User.id == student_id).first()
     if not student:
         raise HTTPException(status_code=404, detail="O'quvchi topilmadi")
@@ -102,14 +109,6 @@ def delete_student(student_id: int, db: Session = Depends(database.get_db)):
     db.commit()
     return {"message": "O'quvchi muvaffaqiyatli o'chirildi"}
 
-# Ballar va Overview hisoblash mantiqi (Namuna)
-def calculate_overview(score: float):
-    if score >= 8.0: return "A'lochi (Expert)"
-    if score >= 6.5: return "Yaxshi (Competent)"
-    return "Qoniqarsiz (Improvement needed)"
-
 @app.get("/user/scores/{user_id}")
 def get_user_scores(user_id: int, db: Session = Depends(database.get_db)):
-    # Dashboard uchun o'quvchi ballari
-
     return db.query(models.Score).filter(models.Score.user_id == user_id).all()
