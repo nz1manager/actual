@@ -1,24 +1,9 @@
-from django.contrib import admin
 from django.urls import path
 from django.http import JsonResponse
-from django.contrib.auth.models import User
-from django.core.management import call_command
 
-def setup_all(request):
-    try:
-        # Bazadagi jadvallarni yaratish (Migrate)
-        call_command('migrate')
-        
-        # Admin yaratish
-        if not User.objects.filter(username="drkz1").exists():
-            User.objects.create_superuser("drkz1", "admin@example.com", "4900728Tt")
-            return JsonResponse({"status": "Success", "message": "Database migrated and Admin created!"})
-        
-        return JsonResponse({"status": "Already setup", "message": "Database is ready"})
-    except Exception as e:
-        return JsonResponse({"status": "Error", "message": str(e)})
+def simple_check(request):
+    return JsonResponse({"status": "Success", "message": "Django is alive!"})
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('setup/', setup_all), # Endi shu manzilni ochamiz
+    path('', simple_check),
 ]
