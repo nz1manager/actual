@@ -1,0 +1,15 @@
+# Python kesh fayllari
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Muhit o'zgaruvchilari (MAXFIY)
+.env
+
+# Virtual muhit
+venv/
+env/
+
+# IDE sozlamalari
+.vscode/
+.idea/
