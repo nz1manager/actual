@@ -3,4 +3,6 @@ uvicorn[standard]
 sqlalchemy
 psycopg2-binary
 pydantic[email]
+
 python-dotenv
+firebase-admin
