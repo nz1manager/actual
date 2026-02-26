@@ -20,7 +20,7 @@
 Thumbs.db
 
 # Go mod files (already handled in Dockerfile)
-go.sum
+
 
 # Test files
 *_test.go
