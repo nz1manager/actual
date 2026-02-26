@@ -84,9 +84,15 @@ func (h *UserHandler) GetStats(c *gin.Context) {
         }
     }
     
+    // FIXED: Proper Go syntax for average calculation
+    averageScore := 0
+    if totalTests > 0 {
+        averageScore = totalScore / totalTests
+    }
+    
     c.JSON(http.StatusOK, gin.H{
         "total_tests_taken": totalTests,
         "total_score":       totalScore,
-        "average_score":     totalTests > 0 ? totalScore / totalTests : 0,
+        "average_score":     averageScore,
     })
 }
