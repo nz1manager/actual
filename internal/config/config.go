@@ -6,7 +6,7 @@ import (
     "gorm.io/driver/postgres"
     "gorm.io/gorm"
     "gorm.io/gorm/logger"
-    "yourmodule/internal/models"
+    "github.com/nz1manager/actual/internal/models"
 )
 
 func InitDB() *gorm.DB {
