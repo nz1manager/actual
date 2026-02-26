@@ -10,9 +10,9 @@ import (
     "github.com/gin-gonic/gin"
     "golang.org/x/oauth2"
     "golang.org/x/oauth2/google"
-    "yourmodule/internal/models"
-    "yourmodule/internal/repository"
-    "yourmodule/internal/utils"
+    "github.com/nz1manager/actual/internal/models"
+    "github.com/nz1manager/actual/internal/repository"
+    "github.com/nz1manager/actual/internal/utils"
 )
 
 type AuthHandler struct {
