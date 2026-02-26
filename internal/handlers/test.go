@@ -90,8 +90,8 @@ func (h *TestHandler) SubmitTest(c *gin.Context) {
         return
     }
     
-    // Calculate score
-    score := calculateScore(input.UserAnswers, test.Answers)
+    // FIXED: Calculate score based on all test questions, not just answered ones
+    score := calculateScore(input.UserAnswers, test.Answers, test.Content)
     
     // Create submission
     submission := &models.Submission{
@@ -151,22 +151,73 @@ func (h *TestHandler) GetReview(c *gin.Context) {
     c.JSON(http.StatusOK, review)
 }
 
-func calculateScore(userAnswers, correctAnswers models.JSONMap) int {
-    // Implement your scoring logic here
-    // This is a simple example - adjust based on your test structure
-    total := 0
-    correct := 0
+// FIXED: Calculate score based on total questions from test content
+func calculateScore(userAnswers, correctAnswers, testContent models.JSONMap) int {
+    // Extract questions from test content structure
+    // This assumes your test content has a "questions" array or map
+    // Adjust this logic based on your actual test content structure
     
-    for q, ans := range userAnswers {
-        if correctAns, ok := correctAnswers[q]; ok && ans == correctAns {
-            correct++
-        }
-        total++
+    var totalQuestions int
+    
+    // Method 1: If questions are stored as an array in the content
+    if questions, ok := testContent["questions"].([]interface{}); ok {
+        totalQuestions = len(questions)
+    } else {
+        // Method 2: If questions are stored as a map with question IDs as keys
+        // Count the number of keys in correctAnswers (assuming each question has an answer)
+        totalQuestions = len(correctAnswers)
     }
     
-    if total == 0 {
+    if totalQuestions == 0 {
         return 0
     }
     
-    return (correct * 100) / total
+    // Count correct answers
+    correct := 0
+    for qID, userAns := range userAnswers {
+        if correctAns, ok := correctAnswers[qID]; ok {
+            // Handle different answer types (string, number, boolean, etc.)
+            if compareAnswers(userAns, correctAns) {
+                correct++
+            }
+        }
+    }
+    
+    // Calculate percentage based on total questions
+    return (correct * 100) / totalQuestions
+}
+
+// Helper function to compare answers of different types
+func compareAnswers(userAnswer, correctAnswer interface{}) bool {
+    switch v := correctAnswer.(type) {
+    case string:
+        if userStr, ok := userAnswer.(string); ok {
+            return userStr == v
+        }
+    case float64:
+        if userFloat, ok := userAnswer.(float64); ok {
+            return userFloat == v
+        }
+    case bool:
+        if userBool, ok := userAnswer.(bool); ok {
+            return userBool == v
+        }
+    case []interface{}:
+        // For multiple choice or array answers
+        if userSlice, ok := userAnswer.([]interface{}); ok {
+            if len(userSlice) != len(v) {
+                return false
+            }
+            for i, val := range userSlice {
+                if !compareAnswers(val, v[i]) {
+                    return false
+                }
+            }
+            return true
+        }
+    default:
+        // Fallback to direct comparison
+        return userAnswer == correctAnswer
+    }
+    return false
 }
