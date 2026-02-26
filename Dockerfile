@@ -9,7 +9,7 @@ RUN apk add --no-cache git ca-certificates tzdata && \
 WORKDIR /app
 
 # Copy go mod files first for better layer caching
-COPY github.com/nz1manager/actual/go.mod
+COPY go.mod go.sum ./
 RUN go mod download
 
 # Copy source code
