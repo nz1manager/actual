@@ -4,8 +4,8 @@ import (
     "net/http"
     "github.com/gin-gonic/gin"
     "github.com/google/uuid"
-    "yourmodule/internal/models"
-    "yourmodule/internal/repository"
+    "github.com/nz1manager/actual//internal/models"
+    "github.com/nz1manager/actual//internal/repository"
 )
 
 type TestHandler struct {
