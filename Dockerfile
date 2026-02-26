@@ -2,10 +2,14 @@ FROM golang:1.21-alpine
 
 WORKDIR /app
 
-# Hammasini copy qil
+# Copy everything
 COPY . .
 
-# Build qil
+# Disable checksum validation for this build
+ENV GOINSECURE=gorm.io/*
+ENV GONOSUMDB=gorm.io/*
+
+# Build
 RUN go build -o main ./cmd/api
 
 EXPOSE 8080
