@@ -1,0 +1,68 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Go mod files (already handled in Dockerfile)
+go.sum
+
+# Test files
+*_test.go
+testdata/
+coverage.out
+
+# Documentation
+README.md
+LICENSE
+docs/
+
+# Docker
+Dockerfile
+.dockerignore
+
+# CI/CD
+.github/
+.gitlab/
+.drone.yml
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Binary files (we build fresh in container)
+main
+main.exe
+*.out
+
+# Application specific
+data/
+uploads/
+!uploads/.gitkeep
+
+# Avoid copying development configs
+configs/development.yaml
+configs/local.yaml
+
+# Keep only production configs if needed
+!configs/production.yaml
