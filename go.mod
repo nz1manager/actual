@@ -1,4 +1,4 @@
-module github.com/yourusername/actual
+module github.com/nz1manager/actual
 
 go 1.21
 
