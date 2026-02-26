@@ -1,1 +1,2 @@
-
+cd actual  # go to your project root
+go mod tidy  # This generates go.sum
