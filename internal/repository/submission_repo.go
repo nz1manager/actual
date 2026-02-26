@@ -2,7 +2,7 @@ package repository
 
 import (
     "gorm.io/gorm"
-    "yourmodule/internal/models"
+    "github.com/nz1manager/actual/internal/models"
 )
 
 type SubmissionRepository struct {
