@@ -4,7 +4,7 @@ import (
     "errors"
     "github.com/google/uuid"
     "gorm.io/gorm"
-    "yourmodule/internal/models"
+    "github.com/nz1manager/actual/internal/models"
 )
 
 type UserRepository struct {
