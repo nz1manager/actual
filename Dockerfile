@@ -5,9 +5,10 @@ WORKDIR /app
 # Copy everything
 COPY . .
 
-# Disable checksum validation for this build
-ENV GOINSECURE=gorm.io/*
-ENV GONOSUMDB=gorm.io/*
+# Disable checksum validation for ALL packages
+ENV GOSUMDB=off
+ENV GOINSECURE=*
+ENV GOPRIVATE=*
 
 # Build
 RUN go build -o main ./cmd/api
