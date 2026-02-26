@@ -1,7 +1,11 @@
 package models
 
 import (
+    "database/sql/driver"
+    "encoding/json"
+    "errors"
     "time"
+    
     "github.com/google/uuid"
     "gorm.io/gorm"
 )
@@ -48,11 +52,42 @@ type Submission struct {
     Test        Test      `gorm:"foreignKey:TestID" json:"test,omitempty"`
 }
 
-// Custom type for JSON maps
+// Custom type for JSON maps with proper GORM implementations
 type JSONMap map[string]interface{}
 
+// FIXED: Implement Valuer interface for JSONMap
+func (jm JSONMap) Value() (driver.Value, error) {
+    if jm == nil {
+        return nil, nil
+    }
+    return json.Marshal(jm)
+}
+
+// FIXED: Implement Scanner interface for JSONMap
 func (jm *JSONMap) Scan(value interface{}) error {
-    return nil // Implementation for GORM scanner
+    if value == nil {
+        *jm = nil
+        return nil
+    }
+    
+    var bytes []byte
+    switch v := value.(type) {
+    case []byte:
+        bytes = v
+    case string:
+        bytes = []byte(v)
+    default:
+        return errors.New("failed to unmarshal JSONB value: invalid type")
+    }
+    
+    result := make(map[string]interface{})
+    err := json.Unmarshal(bytes, &result)
+    if err != nil {
+        return err
+    }
+    
+    *jm = result
+    return nil
 }
 
 // BeforeCreate hooks
