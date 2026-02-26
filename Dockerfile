@@ -1,24 +1,11 @@
 FROM golang:1.21-alpine
-
-# Build uchun kerakli paketlarni o'rnatish
-RUN apk add --no-cache git
-
 WORKDIR /app
-
-# Modul fayllarini nusxalash
-COPY go.mod ./
-# go.sum mavjud bo'lsa nusxalaydi
-COPY go.sum* ./
-
-# Kutubxonalarni yuklab olish
+# Kutubxonalarni yuklash uchun mod fayllarni nusxalash
+COPY go.mod go.sum ./
 RUN go mod download
-
-# Hamma kodni nusxalash
+# Qolgan hamma narsani nusxalash
 COPY . .
-
-# Main.go'ni build qilish
-RUN go build -o main main.go
-
+# Build qilish (xato bo'lsa shu yerda ko'rsatadi)
+RUN go build -o main .
 EXPOSE 8080
-
 CMD ["./main"]
