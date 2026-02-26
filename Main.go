@@ -2,7 +2,7 @@ package main
 
 import (
 	"database/sql"
-	"ielts-actual-backend/auth" // auth papkangiz borligini tekshiring
+	"ielts-actual-backend/auth"
 	"log"
 	"net/http"
 	"os"
@@ -15,10 +15,8 @@ import (
 var DB *sql.DB
 
 func main() {
-	// 1. .env yuklash
 	godotenv.Load()
 
-	// 2. Bazaga ulanish
 	var err error
 	connStr := os.Getenv("DATABASE_URL")
 	DB, err = sql.Open("postgres", connStr)
@@ -26,10 +24,8 @@ func main() {
 		log.Fatal("Bazaga ulanishda xato:", err)
 	}
 
-	// 3. Serverni yaratish
 	router := gin.Default()
 
-	// 4. CORS ruxsati
 	router.Use(func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
@@ -41,14 +37,12 @@ func main() {
 		c.Next()
 	})
 
-	// --- YO'NALISHLAR (ROUTES) BOSHLANDI ---
-
-	// Test API
+	// 1. Asosiy sahifa
 	router.GET("/", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "IELTS Actual 2026 Backend Online"})
 	})
 
-	// Google Login
+	// 2. Google Login
 	router.POST("/api/google-login", func(c *gin.Context) {
 		var body struct {
 			Token string `json:"token"`
@@ -57,13 +51,11 @@ func main() {
 			c.JSON(400, gin.H{"error": "Token topilmadi"})
 			return
 		}
-
 		googleUser, err := auth.GetGoogleUserInfo(body.Token)
 		if err != nil {
 			c.JSON(401, gin.H{"error": "Google xatosi"})
 			return
 		}
-
 		var userID int
 		err = DB.QueryRow("SELECT id FROM users WHERE google_id = $1", googleUser.ID).Scan(&userID)
 		if err != nil {
@@ -72,11 +64,10 @@ func main() {
 				googleUser.ID, googleUser.Email, googleUser.Name, googleUser.Picture,
 			).Scan(&userID)
 		}
-
 		c.JSON(200, gin.H{"user_id": userID, "full_name": googleUser.Name, "avatar": googleUser.Picture})
 	})
 
-	// User Save
+	// 3. Foydalanuvchi ma'lumotlarini saqlash
 	router.POST("/api/save-user", func(c *gin.Context) {
 		var input struct {
 			GoogleID  string `json:"google_id"`
@@ -88,12 +79,12 @@ func main() {
 			c.JSON(400, gin.H{"error": "Ma'lumotlar to'liq emas"})
 			return
 		}
-		_, err = DB.Exec("UPDATE users SET first_name=$1, last_name=$2, phone=$3 WHERE google_id=$4",
+		DB.Exec("UPDATE users SET first_name=$1, last_name=$2, phone=$3 WHERE google_id=$4",
 			input.FirstName, input.LastName, input.Phone, input.GoogleID)
 		c.JSON(200, gin.H{"message": "Updated successfully!"})
 	})
 
-	// Admin Login
+	// 4. Admin Login
 	router.POST("/api/admin/login", func(c *gin.Context) {
 		var creds struct {
 			Username string `json:"username"`
@@ -107,7 +98,7 @@ func main() {
 		}
 	})
 
-	// O'quvchilar ro'yxati (13 & 15-qadam birlashmasi)
+	// 5. O'quvchilarni boshqarish
 	router.GET("/api/admin/all-students", func(c *gin.Context) {
 		rows, _ := DB.Query("SELECT id, first_name, last_name, phone, email FROM users WHERE role = 'user'")
 		defer rows.Close()
@@ -121,88 +112,39 @@ func main() {
 		c.JSON(200, students)
 	})
 
-    // O'quvchini o'chirish
-    router.DELETE("/api/admin/user/:id", func(c *gin.Context) {
-        id := c.Param("id")
-        DB.Exec("DELETE FROM users WHERE id = $1", id)
-        c.JSON(200, gin.H{"message": "O'chirildi"})
-    })
+	router.DELETE("/api/admin/user/:id", func(c *gin.Context) {
+		id := c.Param("id")
+		DB.Exec("DELETE FROM users WHERE id = $1", id)
+		c.JSON(200, gin.H{"message": "O'chirildi"})
+	})
 
-	// --- YO'NALISHLAR TUGADI ---
+	// 6. Test natijalarini topshirish
+	router.POST("/api/submit-test", func(c *gin.Context) {
+		var sub struct {
+			UserID int `json:"user_id"`; TestID int `json:"test_id"`; Correct int `json:"correct_answers"`; Total int `json:"total_questions"`
+		}
+		if err := c.ShouldBindJSON(&sub); err == nil {
+			score := (float64(sub.Correct) / float64(sub.Total)) * 9
+			DB.Exec("INSERT INTO scores (user_id, test_id, correct_answers, total_questions, score_value) VALUES ($1, $2, $3, $4, $5)",
+				sub.UserID, sub.TestID, sub.Correct, sub.Total, score)
+			c.JSON(200, gin.H{"message": "Test topshirildi", "score": score})
+		}
+	})
 
-	// 5. Serverni ishga tushirish
+	// 7. Dashboard (Overview)
+	router.GET("/api/user-dashboard/:id", func(c *gin.Context) {
+		userID := c.Param("id")
+		var total int; var avg float64
+		DB.QueryRow("SELECT COUNT(*), COALESCE(AVG(score_value), 0) FROM scores WHERE user_id = $1", userID).Scan(&total, &avg)
+		
+		overview := "Qoniqarsiz"
+		if avg >= 8.5 { overview = "A'lochi (Expert)" } else if avg >= 7.0 { overview = "Yaxshi (Good)" } else if avg >= 5.0 { overview = "Qoniqarli" }
+		
+		c.JSON(200, gin.H{"total_tests": total, "avg_score": avg, "overview": overview})
+	})
+
+	// --- FAQAT SHU BUYRUQ OXIRIDA TURISHI KERAK ---
 	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-	// Test natijasini saqlash va hisoblash
-router.POST("/api/submit-test", func(c *gin.Context) {
-    var submission struct {
-        UserID         int   `json:"user_id"`
-        TestID         int   `json:"test_id"`
-        CorrectAnswers int   `json:"correct_answers"`
-        TotalQuestions int   `json:"total_questions"`
-    }
-
-    if err := c.ShouldBindJSON(&submission); err != nil {
-        c.JSON(400, gin.H{"error": "Ma'lumotlar xato"})
-        return
-    }
-
-    // Band score hisoblash (IELTS standartida taxminan)
-    // score_value = (correct / total) * 9
-    scoreValue := (float64(submission.CorrectAnswers) / float64(submission.TotalQuestions)) * 9
-
-    // Bazaga natijani yozish
-    _, err := DB.Exec(`
-        INSERT INTO scores (user_id, test_id, correct_answers, total_questions, score_value) 
-        VALUES ($1, $2, $3, $4, $5)`,
-        submission.UserID, submission.TestID, submission.CorrectAnswers, submission.TotalQuestions, scoreValue)
-
-    if err != nil {
-        c.JSON(500, gin.H{"error": "Natijani saqlashda xato"})
-        return
-    }
-
-    c.JSON(200, gin.H{
-        "message": "Test muvaffaqiyatli topshirildi!",
-        "your_score": scoreValue,
-    })
-})
-
-// O'quvchi uchun Dashboard ma'lumotlari (Overview)
-router.GET("/api/user-dashboard/:id", func(c *gin.Context) {
-    userID := c.Param("id")
-
-    var totalTests int
-    var avgScore float64
-
-    // Umumiy testlar soni va o'rtacha ballni olish
-    err := DB.QueryRow(`
-        SELECT COUNT(*), COALESCE(AVG(score_value), 0) 
-        FROM scores WHERE user_id = $1`, userID).Scan(&totalTests, &avgScore)
-
-    if err != nil {
-        c.JSON(500, gin.H{"error": "Ma'lumotlarni yuklashda xato"})
-        return
-    }
-
-    // Siz aytgan "Overview" darajasini aniqlash
-    overview := "Qoniqarsiz"
-    if avgScore >= 8.5 {
-        overview = "A'lochi (Expert)"
-    } else if avgScore >= 7.0 {
-        overview = "Yaxshi (Good)"
-    } else if avgScore >= 5.0 {
-        overview = "Qoniqarli (Satisfactory)"
-    }
-
-    c.JSON(200, gin.H{
-        "total_tests_done": totalTests,
-        "total_score":      avgScore,
-        "overview":         overview,
-    })
-})
-
+	if port == "" { port = "8080" }
 	router.Run(":" + port)
 }
