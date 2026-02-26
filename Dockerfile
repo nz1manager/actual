@@ -10,7 +10,6 @@ WORKDIR /app
 
 # Copy go mod files first for better layer caching
 COPY github.com/nz1manager/actual/go.mod
-COPY github.com/nz1manager/actual/go.sum
 RUN go mod download
 
 # Copy source code
