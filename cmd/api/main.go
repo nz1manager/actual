@@ -6,10 +6,10 @@ import (
     "os"
     "github.com/gin-gonic/gin"
     "github.com/joho/godotenv"
-    "yourmodule/internal/config"
-    "yourmodule/internal/handlers"
-    "yourmodule/internal/middleware"
-    "yourmodule/internal/repository"
+    "github.com/nz1manager/actual/internal/config"
+    "github.com/nz1manager/actual/internal/handlers"
+    "github.com/nz1manager/actual/internal/middleware"
+    "github.com/nz1manager/actual/internal/repository"
 )
 
 func main() {
