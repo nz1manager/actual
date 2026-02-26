@@ -4,7 +4,7 @@ import (
     "net/http"
     "strings"
     "github.com/gin-gonic/gin"
-    "yourmodule/internal/utils"
+    "github.com/nz1manager/actual/internal/utils"
 )
 
 func JWTAuth() gin.HandlerFunc {
