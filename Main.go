@@ -44,6 +44,43 @@ func main() {
 	router.GET("/", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "IELTS Actual 2026 Backend Online"})
 	})
+// Google orqali kirish va bazaga yozish
+router.POST("/api/google-login", func(c *gin.Context) {
+    var body struct {
+        Token string `json:"token"`
+    }
+    if err := c.ShouldBindJSON(&body); err != nil {
+        c.JSON(400, gin.H{"error": "Token topilmadi"})
+        return
+    }
+
+    // Google'dan ma'lumotlarni olish (auth paketi orqali)
+    googleUser, err := auth.GetGoogleUserInfo(body.Token)
+    if err != nil {
+        c.JSON(401, gin.H{"error": "Google bilan bog'lanib bo'lmadi"})
+        return
+    }
+
+    // Bazada foydalanuvchini qidirish yoki yangi ochish
+    var userID int
+    err = DB.QueryRow("SELECT id FROM users WHERE google_id = $1", googleUser.ID).Scan(&userID)
+
+    if err != nil { // Foydalanuvchi topilmadi, demak yangi qo'shamiz
+        err = DB.QueryRow(
+            "INSERT INTO users (google_id, email, first_name, avatar_url) VALUES ($1, $2, $3, $4) RETURNING id",
+            googleUser.ID, googleUser.Email, googleUser.Name, googleUser.Picture,
+        ).Scan(&userID)
+    }
+
+    c.JSON(200, gin.H{
+        "user_id":    userID,
+        "google_id":  googleUser.ID,
+        "full_name":  googleUser.Name,
+        "email":      googleUser.Email,
+        "avatar":     googleUser.Picture,
+        "is_new":     err == nil, // Agar yangi bo'lsa, front-end Ism/Tel kiritishga yo'naltiradi
+    })
+})
 
 	// 5. Siz aytgan "Save" funksiyasi (Foydalanuvchi ma'lumotlarini saqlash)
 	router.POST("/api/save-user", func(c *gin.Context) {
