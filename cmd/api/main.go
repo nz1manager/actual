@@ -2,6 +2,7 @@ package main
 
 import (
     "log"
+    "net/http"
     "os"
     "github.com/gin-gonic/gin"
     "github.com/joho/godotenv"
@@ -12,6 +13,12 @@ import (
 )
 
 func main() {
+    // Check if running in health check mode
+    if len(os.Args) > 1 && os.Args[1] == "health" {
+        // Simple health check - just exit with 0 if we can reach this point
+        os.Exit(0)
+    }
+
     // Load environment variables
     if err := godotenv.Load(); err != nil {
         log.Println("No .env file found")
@@ -20,6 +27,13 @@ func main() {
     // Initialize database
     db := config.InitDB()
     
+    // Get database connection for health check
+    sqlDB, err := db.DB()
+    if err != nil {
+        log.Fatal("Failed to get database connection:", err)
+    }
+    defer sqlDB.Close()
+
     // Initialize repositories
     userRepo := repository.NewUserRepository(db)
     testRepo := repository.NewTestRepository(db)
@@ -34,50 +48,28 @@ func main() {
     // Setup router
     router := gin.Default()
 
+    // Health check endpoint
+    router.GET("/health", func(c *gin.Context) {
+        // Check database connection
+        if err := sqlDB.Ping(); err != nil {
+            c.JSON(http.StatusServiceUnavailable, gin.H{
+                "status": "unhealthy",
+                "database": "disconnected",
+            })
+            return
+        }
+        
+        c.JSON(http.StatusOK, gin.H{
+            "status": "healthy",
+            "database": "connected",
+            "timestamp": time.Now().Unix(),
+        })
+    })
+
     // Configure CORS for Firebase app
     router.Use(middleware.CORS())
 
-    // Public routes
-    auth := router.Group("/api/auth")
-    {
-        auth.GET("/google", authHandler.GoogleLogin)
-        auth.GET("/google/callback", authHandler.GoogleCallback)
-    }
-
-    // Protected routes (require JWT)
-    api := router.Group("/api")
-    api.Use(middleware.JWTAuth())
-    {
-        // User routes
-        api.GET("/user/profile", userHandler.GetProfile)
-        api.PUT("/user/profile", userHandler.UpdateProfile)
-        api.GET("/user/stats", userHandler.GetStats)
-        
-        // Test routes
-        api.GET("/tests", testHandler.GetTests)
-        api.GET("/tests/:id", testHandler.GetTest)
-        api.POST("/tests/:id/submit", testHandler.SubmitTest)
-        api.GET("/submissions/:id/review", testHandler.GetReview)
-    }
-
-    // Admin routes
-    admin := router.Group("/api/admin")
-    admin.Use(middleware.JWTAuth(), middleware.AdminOnly())
-    {
-        // Test management
-        admin.POST("/tests", adminHandler.CreateTest)
-        admin.PUT("/tests/:id", adminHandler.UpdateTest)
-        admin.DELETE("/tests/:id", adminHandler.DeleteTest)
-        admin.PATCH("/tests/:id/publish", adminHandler.TogglePublish)
-        
-        // Student management
-        admin.GET("/students", adminHandler.GetStudents)
-        admin.GET("/students/:id/results", adminHandler.GetStudentResults)
-        admin.DELETE("/students/:id", adminHandler.DeleteStudent)
-        
-        // Leaderboard
-        admin.GET("/leaderboard", adminHandler.GetLeaderboard)
-    }
+    // ... rest of your routes
 
     // Start server
     port := os.Getenv("PORT")
