@@ -24,7 +24,6 @@ async fn main() {
         .layer(CorsLayer::permissive())
         .with_state(app_state);
 
-    // Render uchun portni avtomatik aniqlash yoki 10000 ishlatish
     let port = std::env::var("PORT").unwrap_or_else(|_| "10000".to_string());
     let addr = format!("0.0.0.0:{}", port);
     
@@ -51,7 +50,12 @@ async fn ws_handler(
 async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
     let (mut sender, _) = socket.split();
     let mut rx = state.tx.subscribe();
+
     while let Ok(msg) = rx.recv().await {
-        if sender.send(Message::Text(msg.to_string())).await.is_err() { break; }
+        // Message turini aniq ko'rsatamiz
+        let text_msg = Message::Text(msg.to_string().into());
+        if sender.send(text_msg).await.is_err() { 
+            break; 
+        }
     }
 }
